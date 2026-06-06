@@ -11,6 +11,10 @@
 #ifdef USE_ESP32
 #include "lwip/err.h"
 #include "lwip/sys.h"
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
 #endif
