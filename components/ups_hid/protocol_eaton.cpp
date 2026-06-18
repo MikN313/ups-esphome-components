@@ -502,36 +502,57 @@ void EatonProtocol::parse_output_voltage_report(const HidReport &report, UpsData
            data.power.output_voltage, report.data[2], report.data[1], voltage_raw);
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
 void EatonProtocol::parse_battery_system_report(const HidReport &report, UpsData &data) {
-  if (report.data.size() < 8) {
+  ESP_LOGD(EATON_TAG, "=== EATON load report debug ===");
+  ESP_LOGD(EATON_TAG, "Report size: %zu", report.data.size());
+
+  for (size_t i = 0; i < report.data.size(); i++) {
+    ESP_LOGD(EATON_TAG, "report.data[%u] = 0x%02X (%u)",
+             (unsigned) i, report.data[i], report.data[i]);
+  }
+
+  if (report.data.size() < 2) {
     ESP_LOGW(EATON_TAG, "Load percentage report too short: %zu bytes", report.data.size());
     return;
   }
 
-  // Path: UPS.BatterySystem.Charger.Status, Type: Feature, ReportID: 0x07, Offset: 0, Size: 8
-  // Path: UPS.OutletSystem.Outlet.[1].Status, Type: Feature, ReportID: 0x07, Offset: 8, Size: 8
-  // Path: UPS.OutletSystem.Outlet.[2].Status, Type: Feature, ReportID: 0x07, Offset: 16, Size: 8
-  // Path: UPS.PowerSummary.OverallAlarm.Code, Type: Feature, ReportID: 0x07, Offset: 24, Size: 8
-  // Path: UPS.PowerSummary.Mode, Type: Feature, ReportID: 0x07, Offset: 32, Size: 8
-  // Path: UPS.PowerSummary.PercentLoad, Type: Feature, ReportID: 0x07, Offset: 40, Size: 8
-  // Path: UPS.PowerSummary.Status, Type: Feature, ReportID: 0x07, Offset: 48, Size: 8
-
-  ESP_LOGD(EATON_TAG, "UPS.BatterySystem.Charger.Status: 0x%02X", report.data[1]);
-  ESP_LOGD(EATON_TAG, "UPS.OutletSystem.Outlet.[1].Status: 0x%02X", report.data[2]);
-  ESP_LOGD(EATON_TAG, "UPS.OutletSystem.Outlet.[2].Status: 0x%02X", report.data[3]);
-  ESP_LOGD(EATON_TAG, "UPS.PowerSummary.OverallAlarm.Code: 0x%02X", report.data[4]);
-  ESP_LOGD(EATON_TAG, "UPS.PowerSummary.Mode: 0x%02X", report.data[5]);
-  ESP_LOGD(EATON_TAG, "PowerSummary.PercentLoad: 0x%02X", report.data[6]);
-  ESP_LOGD(EATON_TAG, "UPS.PowerSummary.Status: 0x%02X", report.data[7]);
-
-  // NUT debug: Report 0x07, Value: 6 (our raw: 0x07 = 7%)
-  // Data format: [ID, load%] - single byte
-  uint8_t load_percent = report.data[6];
+  uint8_t load_percent = report.data[1];
   data.power.load_percent = static_cast<float>(load_percent);
 
-  ESP_LOGD(EATON_TAG, "Load: %.0f%% (raw: 0x%02X = %d)",
+  ESP_LOGD(EATON_TAG, "TEMP Load decode: %.0f%% from report.data[1] = 0x%02X (%u)",
            data.power.load_percent, load_percent, load_percent);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 void EatonProtocol::check_battery_voltage_scaling(float battery_voltage, float nominal_voltage) {
   if (battery_scale_checked_) {
