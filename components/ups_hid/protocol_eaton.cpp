@@ -515,14 +515,6 @@ void EatonProtocol::parse_output_voltage_report(const HidReport &report, UpsData
 
 
 void EatonProtocol::parse_battery_system_report(const HidReport &report, UpsData &data) {
-  ESP_LOGD(EATON_TAG, "=== EATON load report debug ===");
-  ESP_LOGD(EATON_TAG, "Report size: %zu", report.data.size());
-
-  for (size_t i = 0; i < report.data.size(); i++) {
-    ESP_LOGD(EATON_TAG, "report.data[%u] = 0x%02X (%u)",
-             (unsigned) i, report.data[i], report.data[i]);
-  }
-
   if (report.data.size() < 2) {
     ESP_LOGW(EATON_TAG, "Load percentage report too short: %zu bytes", report.data.size());
     return;
@@ -531,10 +523,9 @@ void EatonProtocol::parse_battery_system_report(const HidReport &report, UpsData
   uint8_t load_percent = report.data[1];
   data.power.load_percent = static_cast<float>(load_percent);
 
-  ESP_LOGD(EATON_TAG, "TEMP Load decode: %.0f%% from report.data[1] = 0x%02X (%u)",
+  ESP_LOGD(EATON_TAG, "Load: %.0f%% (raw: 0x%02X = %u)",
            data.power.load_percent, load_percent, load_percent);
 }
-
 
 
 
