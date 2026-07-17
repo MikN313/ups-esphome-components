@@ -64,7 +64,7 @@ namespace esphome
     class UpsHidComponent : public PollingComponent
     {
     public:
-      UpsHidComponent() = default;
+      UpsHidComponent() : PollingComponent(30000) {}
       ~UpsHidComponent() = default;
 
       void setup() override;
