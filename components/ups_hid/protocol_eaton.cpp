@@ -1467,12 +1467,18 @@ std::unique_ptr<UpsProtocolBase> create_eaton_protocol(UpsHidComponent* parent) 
 } // namespace ups_hid
 } // namespace esphome
 
-// Register Eaton protocol for vendor ID 0x0463
-//REGISTER_UPS_PROTOCOL_FOR_VENDOR(0x0463, eaton_hid_protocol, esphome::ups_hid::create_eaton_protocol, "Eaton HID Protocol", "Eaton HID protocol with comprehensive sensor support and test functionality", 100);
-REGISTER_UPS_PROTOCOL_FOR_VENDOR(
-    0x0463,
-    eaton,
-    esphome::ups_hid::create_eaton_protocol,
-    "Eaton HID Protocol",
-    "Eaton HID protocol with comprehensive sensor support and test functionality",
-    100);
+namespace {
+struct EatonProtocolRegistration {
+  EatonProtocolRegistration() {
+    ProtocolFactory::ProtocolInfo info;
+    info.name = "eaton";
+    info.priority = 100;
+    info.creator = [](UpsHidComponent *parent) -> std::unique_ptr<UpsProtocolBase> {
+      return create_eaton_protocol(parent);
+    };
+    ProtocolFactory::register_protocol_for_vendor(0x0463, info);
+  }
+};
+
+static EatonProtocolRegistration eaton_protocol_registration;
+}  // namespace
