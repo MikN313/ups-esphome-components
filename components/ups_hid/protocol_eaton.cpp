@@ -1469,6 +1469,7 @@ std::unique_ptr<UpsProtocolBase> create_eaton_protocol(UpsHidComponent *parent) 
 namespace {
 struct EatonProtocolRegistration {
   EatonProtocolRegistration() {
+    ESP_LOGI("ups_hid.factory", "Registering Eaton protocol");
     ProtocolFactory::ProtocolInfo info;
     info.name = "eaton";
     info.priority = 100;
