@@ -19,9 +19,9 @@ static const char *const CYBERPOWER_HID_TAG = "cyberpower_hid";
 // HID report IDs used by CyberPower devices
 namespace report_id {
 static constexpr uint8_t BATTERY_STATUS = 0x01;
-static constexpr uint8_t POWER_STATUS = 0x02;
-static constexpr uint8_t CONFIG_STATUS = 0x03;
-static constexpr uint8_t DEVICE_STATUS = 0x04;
+static constexpr uint8_t POWER_STATUS   = 0x02;
+static constexpr uint8_t CONFIG_STATUS  = 0x03;
+static constexpr uint8_t DEVICE_STATUS  = 0x04;
 }  // namespace report_id
 
 // CyberPower HID vendor IDs
@@ -80,9 +80,9 @@ void CyberPowerReportParser::parse_battery_report(const HidReport &report,
     return;
   }
 
-  uint8_t battery_level = report.data[0];
-  data.battery.level = static_cast<float>(battery_level);
-  data.battery.voltage = read_float(report.data, 1, 0.1f);
+  uint8_t battery_level        = report.data[0];
+  data.battery.level           = static_cast<float>(battery_level);
+  data.battery.voltage         = read_float(report.data, 1, 0.1f);
   data.battery.voltage_nominal = read_float(report.data, 3, 0.1f);
 
   uint32_t runtime_raw = read_u32(report.data, 5);
@@ -95,7 +95,7 @@ void CyberPowerReportParser::parse_battery_report(const HidReport &report,
            battery_level, data.battery.voltage, data.battery.voltage_nominal,
            runtime_raw);
 
-  data.battery.valid = true;
+  // Nessun flag 'valid' esplicito nel modello nuovo.
 }
 
 void CyberPowerReportParser::parse_power_report(const HidReport &report,
@@ -106,11 +106,11 @@ void CyberPowerReportParser::parse_power_report(const HidReport &report,
     return;
   }
 
-  data.power.input_voltage = read_float(report.data, 0, 0.1f);
-  data.power.output_voltage = read_float(report.data, 2, 0.1f);
+  data.power.input_voltage         = read_float(report.data, 0, 0.1f);
+  data.power.output_voltage        = read_float(report.data, 2, 0.1f);
   data.power.input_voltage_nominal = read_float(report.data, 4, 0.1f);
-  data.power.load_percent = read_float(report.data, 6, 1.0f);
-  data.power.frequency = read_float(report.data, 8, 0.1f);
+  data.power.load_percent          = read_float(report.data, 6, 1.0f);
+  data.power.frequency             = read_float(report.data, 8, 0.1f);
 
   ESP_LOGD(CYBERPOWER_HID_TAG,
            "Power report: Vin=%.1f V, Vout=%.1f V, nominal=%.1f V, load=%.1f%%, freq=%.1f Hz",
@@ -118,7 +118,8 @@ void CyberPowerReportParser::parse_power_report(const HidReport &report,
            data.power.input_voltage_nominal, data.power.load_percent,
            data.power.frequency);
 
-  data.power.set_input_voltage_valid(data.power.input_voltage > 0.0f);
+  // Usa il flag diretto presente in PowerData.
+  data.power.input_voltage_valid = (data.power.input_voltage > 0.0f);
 }
 
 void CyberPowerReportParser::parse_config_report(const HidReport &report,
@@ -130,8 +131,8 @@ void CyberPowerReportParser::parse_config_report(const HidReport &report,
   }
 
   data.config.delay_shutdown = static_cast<int>(report.data[0]);
-  data.config.delay_start = static_cast<int>(report.data[1]);
-  data.config.delay_reboot = static_cast<int>(report.data[2]);
+  data.config.delay_start    = static_cast<int>(report.data[1]);
+  data.config.delay_reboot   = static_cast<int>(report.data[2]);
 
   ESP_LOGD(CYBERPOWER_HID_TAG,
            "Config report: shutdown=%d s, start=%d s, reboot=%d s",
@@ -234,7 +235,7 @@ bool CyberPowerProtocol::read_single_report(uint8_t report_id,
   }
 
   uint8_t data[64] = {0};
-  size_t data_len = sizeof(data);
+  size_t data_len  = sizeof(data);
 
   if (parent_->hid_get_report(0x01, report_id, data, &data_len, timeout_ms) !=
       ESP_OK) {
