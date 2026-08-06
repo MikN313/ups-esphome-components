@@ -1,133 +1,76 @@
 #pragma once
 
-#include <memory>
 #include <functional>
+#include <memory>
+#include <string>
 #include <unordered_map>
 #include <vector>
-#include <string>
 
 namespace esphome {
 namespace ups_hid {
 
-// Forward declarations
-class UpsProtocolBase;
 class UpsHidComponent;
+class UpsProtocolBase;
 
 /**
- * Protocol Factory with Self-Registration Support
+ * @brief Factory class for creating UPS protocol instances.
  *
- * Enables protocols to register themselves automatically, following the
- * Open/Closed Principle - new protocols can be added without modifying
- * existing code.
- *
- * Design Pattern: Factory Method + Registry Pattern
+ * This class provides a flexible registry-based mechanism to:
+ * - Register specific protocols for particular vendors
+ * - Register fallback protocols for unknown vendors
+ * - Create protocol instances based on vendor ID or protocol name
+ * - Query supported protocols and vendor support
  */
 class ProtocolFactory {
-public:
-    // Protocol creator function type
-    using CreatorFunc = std::function<std::unique_ptr<UpsProtocolBase>(UpsHidComponent*)>;
+ public:
+  // Information about a protocol implementation
+  struct ProtocolInfo {
+    // Protocol name (for UI/logging, e.g., "APC HID")
+    std::string name;
+    // Short identifier (optional, can be same as name or empty)
+    std::string identifier;
+    // Human-readable description
+    std::string description;
+    // Protocol priority (higher value = preferred)
+    int priority = 0;
+    // Creator function for protocol instances
+    std::function<std::unique_ptr<UpsProtocolBase>(UpsHidComponent *parent)> creator;
+  };
 
-    // Protocol metadata for better selection
-    struct ProtocolInfo {
-        CreatorFunc creator;
-        std::string name;
-        std::string description;
-        std::vector<uint16_t> supported_vendors;
-        int priority; // Higher priority = tried first
-    };
+  // Register a protocol for a specific vendor ID
+  static void register_protocol_for_vendor(uint16_t vendor_id,
+                                           const ProtocolInfo &info);
 
-    /**
-     * Register a protocol with specific vendor IDs
-     */
-    static void register_protocol_for_vendor(uint16_t vendor_id,
-                                           const ProtocolInfo& info);
+  // Register a fallback protocol (used when no vendor-specific protocol matches)
+  static void register_fallback_protocol(const ProtocolInfo &info);
 
-    /**
-     * Register a fallback protocol (tried when vendor-specific fails)
-     */
-    static void register_fallback_protocol(const ProtocolInfo& info);
+  // Create a protocol instance for a given vendor ID
+  static std::unique_ptr<UpsProtocolBase> create_for_vendor(uint16_t vendor_id,
+                                                            UpsHidComponent *parent);
 
-    /**
-     * Create protocol instance for specific vendor
-     */
-    static std::unique_ptr<UpsProtocolBase> create_for_vendor(uint16_t vendor_id,
-                                                            UpsHidComponent* parent);
+  // Create a protocol instance by name (case-insensitive, substring match)
+  static std::unique_ptr<UpsProtocolBase> create_by_name(const std::string &protocol_name,
+                                                         UpsHidComponent *parent);
 
-    /**
-     * Create protocol instance by name (manual selection)
-     */
-    static std::unique_ptr<UpsProtocolBase> create_by_name(const std::string& protocol_name,
-                                                         UpsHidComponent* parent);
+  // Check if there is support for the given vendor ID
+  static bool has_vendor_support(uint16_t vendor_id);
 
-    /**
-     * Get ordered list of protocols to try for a vendor
-     * Returns vendor-specific first, then fallbacks by priority
-     */
-    static std::vector<ProtocolInfo> get_protocols_for_vendor(uint16_t vendor_id);
+  // Get a list of all registered protocols for a vendor (including fallbacks)
+  static std::vector<ProtocolInfo> get_protocols_for_vendor(uint16_t vendor_id);
 
-    /**
-     * Get list of all registered protocols
-     */
-    static std::vector<std::pair<uint16_t, ProtocolInfo>> get_all_protocols();
+  // Get a list of all protocols (vendor-specific and fallbacks)
+  static std::vector<std::pair<uint16_t, ProtocolInfo>> get_all_protocols();
 
-    /**
-     * Check if vendor has registered protocols
-     */
-    static bool has_vendor_support(uint16_t vendor_id);
+ private:
+  // Vendor-specific protocol registry: vendor_id -> list of protocols
+  static std::unordered_map<uint16_t, std::vector<ProtocolInfo>> &get_vendor_registry();
 
-private:
-    // Vendor-specific protocol registry
-    static std::unordered_map<uint16_t, std::vector<ProtocolInfo>>& get_vendor_registry();
+  // Fallback protocol registry (used when no vendor-specific protocol matches)
+  static std::vector<ProtocolInfo> &get_fallback_registry();
 
-    // Fallback protocol registry (sorted by priority)
-    static std::vector<ProtocolInfo>& get_fallback_registry();
-
-    // Ensure registries are initialized
-    static void ensure_initialized();
+  // Ensure registries are initialized (optional explicit initialization)
+  static void ensure_initialized();
 };
 
-/**
- * Protocol Registration Helper Macros
- *
- * These macros enable automatic protocol registration at startup
- */
-
-// Forward declare for registration macros
-class ProtocolFactory;
-
-// Register protocol for specific vendor
-#define REGISTER_UPS_PROTOCOL_FOR_VENDOR(vendor_id, protocol_name, creator_func, name_str, desc_str, prio) \
-    namespace { \
-        struct protocol_name##_registrar { \
-            protocol_name##_registrar() { \
-                esphome::ups_hid::ProtocolFactory::ProtocolInfo info; \
-                info.creator = creator_func; \
-                info.name = name_str; \
-                info.description = desc_str; \
-                info.supported_vendors = {vendor_id}; \
-                info.priority = prio; \
-                esphome::ups_hid::ProtocolFactory::register_protocol_for_vendor(vendor_id, info); \
-            } \
-        }; \
-        static protocol_name##_registrar protocol_name##_reg; \
-    }
-
-// Register fallback protocol
-#define REGISTER_UPS_FALLBACK_PROTOCOL(protocol_name, creator_func, name_str, desc_str, prio) \
-    namespace { \
-        struct protocol_name##_fallback_registrar { \
-            protocol_name##_fallback_registrar() { \
-                esphome::ups_hid::ProtocolFactory::ProtocolInfo info; \
-                info.creator = creator_func; \
-                info.name = name_str; \
-                info.description = desc_str; \
-                info.supported_vendors = {}; \
-                info.priority = prio; \
-                esphome::ups_hid::ProtocolFactory::register_fallback_protocol(info); \
-            } \
-        }; \
-        static protocol_name##_fallback_registrar protocol_name##_fallback_reg; \
-    }
-
-} // namespace ups_hid
-} // namespace esphome
+}  // namespace ups_hid
+}  // namespace esphome
