@@ -19,10 +19,10 @@ static const char *const APC_HID_TAG = "apc_hid";
 // HID report IDs used by APC devices
 namespace report_id {
 static constexpr uint8_t BATTERY_STATUS = 0x01;
-static constexpr uint8_t POWER_STATUS = 0x02;
-static constexpr uint8_t TEST_STATUS = 0x03;
-static constexpr uint8_t CONFIG_STATUS = 0x04;
-static constexpr uint8_t DEVICE_STATUS = 0x05;
+static constexpr uint8_t POWER_STATUS   = 0x02;
+static constexpr uint8_t TEST_STATUS    = 0x03;
+static constexpr uint8_t CONFIG_STATUS  = 0x04;
+static constexpr uint8_t DEVICE_STATUS  = 0x05;
 }  // namespace report_id
 
 // APC HID vendor IDs
@@ -69,9 +69,9 @@ static std::string convert_apc_date(uint32_t apc_date) {
   if (apc_date == 0)
     return "";
 
-  uint32_t year = apc_date / 10000;
+  uint32_t year  = apc_date / 10000;
   uint32_t month = (apc_date / 100) % 100;
-  uint32_t day = apc_date % 100;
+  uint32_t day   = apc_date % 100;
 
   char buffer[11];  // YYYY-MM-DD
   snprintf(buffer, sizeof(buffer), "%04" PRIu32 "-%02" PRIu32 "-%02" PRIu32,
@@ -96,9 +96,9 @@ void ApcReportParser::parse_battery_report(const HidReport &report, UpsData &dat
     return;
   }
 
-  uint8_t battery_level = report.data[0];
-  data.battery.level = static_cast<float>(battery_level);
-  data.battery.voltage = read_float(report.data, 1, 0.1f);
+  uint8_t battery_level     = report.data[0];
+  data.battery.level        = static_cast<float>(battery_level);
+  data.battery.voltage      = read_float(report.data, 1, 0.1f);
   data.battery.voltage_nominal = read_float(report.data, 3, 0.1f);
 
   uint32_t runtime_raw = read_u32(report.data, 5);
@@ -111,7 +111,8 @@ void ApcReportParser::parse_battery_report(const HidReport &report, UpsData &dat
            battery_level, data.battery.voltage, data.battery.voltage_nominal,
            runtime_raw);
 
-  data.battery.valid = true;
+  // Nel modello nuovo non esiste più un flag 'valid' esplicito.
+  // La validità verrà dedotta dai valori presenti.
 }
 
 void ApcReportParser::parse_power_report(const HidReport &report, UpsData &data) {
@@ -120,11 +121,11 @@ void ApcReportParser::parse_power_report(const HidReport &report, UpsData &data)
     return;
   }
 
-  data.power.input_voltage = read_float(report.data, 0, 0.1f);
-  data.power.output_voltage = read_float(report.data, 2, 0.1f);
+  data.power.input_voltage         = read_float(report.data, 0, 0.1f);
+  data.power.output_voltage        = read_float(report.data, 2, 0.1f);
   data.power.input_voltage_nominal = read_float(report.data, 4, 0.1f);
-  data.power.load_percent = read_float(report.data, 6, 1.0f);
-  data.power.frequency = read_float(report.data, 8, 0.1f);
+  data.power.load_percent          = read_float(report.data, 6, 1.0f);
+  data.power.frequency             = read_float(report.data, 8, 0.1f);
 
   ESP_LOGD(APC_HID_TAG,
            "Power report: Vin=%.1f V, Vout=%.1f V, nominal=%.1f V, load=%.1f%%, freq=%.1f Hz",
@@ -132,7 +133,8 @@ void ApcReportParser::parse_power_report(const HidReport &report, UpsData &data)
            data.power.input_voltage_nominal, data.power.load_percent,
            data.power.frequency);
 
-  data.power.set_input_voltage_valid(data.power.input_voltage > 0.0f);
+  // Nel tuo modello non c'è più set_input_voltage_valid, uso il flag diretto.
+  data.power.input_voltage_valid = (data.power.input_voltage > 0.0f);
 }
 
 void ApcReportParser::parse_test_report(const HidReport &report, UpsData &data) {
@@ -168,7 +170,7 @@ void ApcReportParser::parse_test_report(const HidReport &report, UpsData &data) 
   }
 
   data.test.timer_shutdown = static_cast<int>(report.data[2]);
-  data.test.timer_start = static_cast<int>(report.data[3]);
+  data.test.timer_start    = static_cast<int>(report.data[3]);
 
   ESP_LOGD(APC_HID_TAG,
            "Test report: status=0x%02X, result=0x%02X, shutdown=%d s, start=%d s",
@@ -183,8 +185,8 @@ void ApcReportParser::parse_config_report(const HidReport &report, UpsData &data
   }
 
   data.config.delay_shutdown = static_cast<int>(report.data[0]);
-  data.config.delay_start = static_cast<int>(report.data[1]);
-  data.config.delay_reboot = static_cast<int>(report.data[2]);
+  data.config.delay_start    = static_cast<int>(report.data[1]);
+  data.config.delay_reboot   = static_cast<int>(report.data[2]);
 
   uint8_t beeper_status = report.data[3];
   static const std::map<uint8_t, const char *> beeper_map = {
@@ -368,8 +370,8 @@ bool ApcProtocol::send_simple_command(const std::vector<uint8_t> &command,
   }
 
   uint8_t report_id = command.empty() ? 0 : command[0];
-  uint8_t data[64] = {0};
-  size_t data_len = command.size();
+  uint8_t data[64]  = {0};
+  size_t data_len   = command.size();
 
   if (data_len > sizeof(data)) {
     ESP_LOGE(APC_HID_TAG, "Command too long: %zu bytes", data_len);
@@ -378,20 +380,16 @@ bool ApcProtocol::send_simple_command(const std::vector<uint8_t> &command,
 
   std::copy(command.begin(), command.end(), data);
 
-  if (parent_->hid_set_report(0x02, report_id, data, data_len, timeout_ms) !=
-      ESP_OK) {
-    ESP_LOGE(APC_HID_TAG, "Failed to send HID command (report_id=0x%02X)",
-             report_id);
+  if (parent_->hid_set_report(0x02, report_id, data, data_len, timeout_ms) != ESP_OK) {
+    ESP_LOGE(APC_HID_TAG, "Failed to send HID command (report_id=0x%02X)", report_id);
     return false;
   }
 
   uint8_t response_data[64] = {0};
-  size_t response_len = sizeof(response_data);
+  size_t response_len       = sizeof(response_data);
 
-  if (parent_->hid_get_report(0x01, report_id, response_data, &response_len,
-                              timeout_ms) != ESP_OK) {
-    ESP_LOGE(APC_HID_TAG, "Failed to read HID response (report_id=0x%02X)",
-             report_id);
+  if (parent_->hid_get_report(0x01, report_id, response_data, &response_len, timeout_ms) != ESP_OK) {
+    ESP_LOGE(APC_HID_TAG, "Failed to read HID response (report_id=0x%02X)", report_id);
     return false;
   }
 
@@ -408,12 +406,10 @@ bool ApcProtocol::read_single_report(uint8_t report_id,
   }
 
   uint8_t data[64] = {0};
-  size_t data_len = sizeof(data);
+  size_t data_len   = sizeof(data);
 
-  if (parent_->hid_get_report(0x01, report_id, data, &data_len, timeout_ms) !=
-      ESP_OK) {
-    ESP_LOGW(APC_HID_TAG, "Failed to read HID report (report_id=0x%02X)",
-             report_id);
+  if (parent_->hid_get_report(0x01, report_id, data, &data_len, timeout_ms) != ESP_OK) {
+    ESP_LOGW(APC_HID_TAG, "Failed to read HID report (report_id=0x%02X)", report_id);
     return false;
   }
 
@@ -421,8 +417,7 @@ bool ApcProtocol::read_single_report(uint8_t report_id,
   return true;
 }
 
-std::unique_ptr<UpsProtocolBase> create_apc_protocol(
-    UpsHidComponent *parent) {
+std::unique_ptr<UpsProtocolBase> create_apc_protocol(UpsHidComponent *parent) {
   return std::make_unique<ApcProtocol>(parent);
 }
 
