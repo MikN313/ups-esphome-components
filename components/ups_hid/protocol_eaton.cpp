@@ -1459,18 +1459,9 @@ bool EatonProtocol::set_reboot_delay(int seconds) {
 namespace esphome {
 namespace ups_hid {
 
+
+
 // Creator function for Eaton protocol
-std::unique_ptr<UpsProtocolBase> create_eaton_protocol(UpsHidComponent* parent) {
-    return std::make_unique<EatonProtocol>(parent);
-}
-
-} // namespace ups_hid
-} // namespace esphome
-
-
-namespace esphome {
-namespace ups_hid {
-
 std::unique_ptr<UpsProtocolBase> create_eaton_protocol(UpsHidComponent *parent) {
   return std::make_unique<EatonProtocol>(parent);
 }
