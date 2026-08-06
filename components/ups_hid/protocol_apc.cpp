@@ -96,9 +96,9 @@ void ApcReportParser::parse_battery_report(const HidReport &report, UpsData &dat
     return;
   }
 
-  uint8_t battery_level     = report.data[0];
-  data.battery.level        = static_cast<float>(battery_level);
-  data.battery.voltage      = read_float(report.data, 1, 0.1f);
+  uint8_t battery_level        = report.data[0];
+  data.battery.level           = static_cast<float>(battery_level);
+  data.battery.voltage         = read_float(report.data, 1, 0.1f);
   data.battery.voltage_nominal = read_float(report.data, 3, 0.1f);
 
   uint32_t runtime_raw = read_u32(report.data, 5);
@@ -111,8 +111,7 @@ void ApcReportParser::parse_battery_report(const HidReport &report, UpsData &dat
            battery_level, data.battery.voltage, data.battery.voltage_nominal,
            runtime_raw);
 
-  // Nel modello nuovo non esiste più un flag 'valid' esplicito.
-  // La validità verrà dedotta dai valori presenti.
+  // Nessun flag 'valid' nel modello nuovo: la validità si deduce dai valori.
 }
 
 void ApcReportParser::parse_power_report(const HidReport &report, UpsData &data) {
@@ -133,7 +132,7 @@ void ApcReportParser::parse_power_report(const HidReport &report, UpsData &data)
            data.power.input_voltage_nominal, data.power.load_percent,
            data.power.frequency);
 
-  // Nel tuo modello non c'è più set_input_voltage_valid, uso il flag diretto.
+  // Usa il flag diretto presente in PowerData.
   data.power.input_voltage_valid = (data.power.input_voltage > 0.0f);
 }
 
@@ -406,7 +405,7 @@ bool ApcProtocol::read_single_report(uint8_t report_id,
   }
 
   uint8_t data[64] = {0};
-  size_t data_len   = sizeof(data);
+  size_t data_len  = sizeof(data);
 
   if (parent_->hid_get_report(0x01, report_id, data, &data_len, timeout_ms) != ESP_OK) {
     ESP_LOGW(APC_HID_TAG, "Failed to read HID report (report_id=0x%02X)", report_id);
