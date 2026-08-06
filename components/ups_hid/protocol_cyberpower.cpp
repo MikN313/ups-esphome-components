@@ -119,7 +119,7 @@ void CyberPowerReportParser::parse_power_report(const HidReport &report,
            data.power.frequency);
 
   // Usa il flag diretto presente in PowerData.
-  data.power.input_voltage_valid = (data.power.input_voltage > 0.0f);
+  //data.power.input_voltage_valid = (data.power.input_voltage > 0.0f);
 }
 
 void CyberPowerReportParser::parse_config_report(const HidReport &report,
