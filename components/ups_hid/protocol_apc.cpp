@@ -133,7 +133,7 @@ void ApcReportParser::parse_power_report(const HidReport &report, UpsData &data)
            data.power.frequency);
 
   // Usa il flag diretto presente in PowerData.
-  data.power.input_voltage_valid = (data.power.input_voltage > 0.0f);
+  //data.power.input_voltage_valid = (data.power.input_voltage > 0.0f);
 }
 
 void ApcReportParser::parse_test_report(const HidReport &report, UpsData &data) {
